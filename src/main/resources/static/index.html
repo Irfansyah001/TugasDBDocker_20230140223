@@ -1,234 +1,226 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User CRUD</title>
-
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
     <style>
         body {
-            font-family: Arial;
+            font-family: Arial, sans-serif;
             margin: 40px;
+            color: #222;
         }
-        input, button {
+
+        h2 {
+            margin-bottom: 12px;
+        }
+
+        form {
+            margin-bottom: 16px;
+        }
+
+        input,
+        button {
             padding: 8px;
             margin: 5px 0;
         }
+
         table {
-            border-collapse: collapse;
-            margin-top: 20px;
             width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
         }
-        table, th, td {
+
+        table,
+        th,
+        td {
             border: 1px solid #ccc;
-            padding: 10px;
         }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: left;
+        }
+
         th {
             background-color: #f4f4f4;
         }
+
         .delete-btn {
+            border: none;
+            cursor: pointer;
+            color: #fff;
             background-color: red;
-            color: white;
-            border: none;
-            cursor: pointer;
         }
+
         .edit-btn {
-            background-color: orange;
-            color: white;
             border: none;
             cursor: pointer;
+            color: #fff;
+            background-color: orange;
         }
+
         .success {
             color: green;
         }
+
         .error {
             color: red;
         }
     </style>
 </head>
 <body>
+    <h2>Form User</h2>
 
-<h2>Form User</h2>
+    <form id="userForm">
+        <input type="hidden" id="userId">
+        <input type="text" id="name" placeholder="Nama" required>
+        <input type="text" id="nim" placeholder="NIM" required>
+        <button type="submit">Simpan</button>
+        <button type="button" onclick="resetForm()">Reset</button>
+    </form>
 
-<form id="userForm">
-    <!-- ID untuk update -->
-    <input type="hidden" id="userId">
+    <div id="message"></div>
 
-    <input type="text" id="name" placeholder="Nama" required>
-    <input type="text" id="nim" placeholder="NIM" required>
+    <h2>List User</h2>
 
-    <button type="submit">Simpan</button>
-    <button type="button" onclick="resetForm()">Reset</button>
-</form>
+    <table>
+        <thead>
+            <tr>
+                <th>Nama</th>
+                <th>NIM</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="userTable"></tbody>
+    </table>
 
-<div id="message"></div>
+    <script>
+        const BASE_URL = "/api/users";
 
-<h2>List User</h2>
+        function setMessage(text, type) {
+            $("#message").text(text).attr("class", type);
+        }
 
-<table>
-    <thead>
-    <tr>
-        <th>Nama</th>
-        <th>NIM</th>
-        <th>Aksi</th>
-    </tr>
-    </thead>
-    <tbody id="userTable"></tbody>
-</table>
+        function renderUserRow(user) {
+            return `
+                <tr>
+                    <td>${user.name}</td>
+                    <td>${user.nim}</td>
+                    <td>
+                        <button class="edit-btn" onclick="editUser('${user.id}', '${user.name}', '${user.nim}')">
+                            Edit
+                        </button>
+                        <button class="delete-btn" onclick="deleteUser('${user.id}')">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
 
-<script>
-
-    const BASE_URL = "/api/users";
-
-    // ========================
-    // LOAD USERS
-    // ========================
-    function loadUsers() {
-        $.ajax({
-            url: BASE_URL,
-            type: "GET",
-            success: function (users) {
-                $("#userTable").empty();
-
-                users.forEach(function (user) {
-                    $("#userTable").append(`
-                        <tr>
-                            <td>${user.name}</td>
-                            <td>${user.nim}</td>
-                            <td>
-                                <button class="edit-btn"
-                                    onclick="editUser('${user.id}', '${user.name}', '${user.nim}')">
-                                    Edit
-                                </button>
-
-                                <button class="delete-btn"
-                                    onclick="deleteUser('${user.id}')">
-                                    Delete
-                                </button>
-                            </td>
-                        </tr>
-                    `);
-                });
-            },
-            error: function (xhr) {
-                console.log(xhr);
-            }
-        });
-    }
-
-    // ========================
-    // ADD / UPDATE USER
-    // ========================
-    $("#userForm").submit(function (e) {
-        e.preventDefault();
-
-        const id = $("#userId").val();
-
-        const userData = {
-            name: $("#name").val(),
-            nim: $("#nim").val()
-        };
-
-        // ========================
-        // UPDATE
-        // ========================
-        if (id) {
+        function loadUsers() {
             $.ajax({
-                url: BASE_URL + "/" + id,
-                type: "PUT",
-                contentType: "application/json",
-                data: JSON.stringify(userData),
+                url: BASE_URL,
+                type: "GET",
+                success: function (users) {
+                    $("#userTable").empty();
 
-                success: function () {
-                    $("#message").html("✏️ User berhasil diupdate").attr("class", "success");
-                    resetForm();
-                    loadUsers();
+                    users.forEach(function (user) {
+                        $("#userTable").append(renderUserRow(user));
+                    });
                 },
-
                 error: function (xhr) {
                     console.log(xhr);
-                    $("#message").html("❌ Gagal update user").attr("class", "error");
                 }
             });
         }
 
-        // ========================
-        // CREATE
-        // ========================
-        else {
+        $("#userForm").submit(function (event) {
+            event.preventDefault();
+
+            const id = $("#userId").val();
+            const userData = {
+                name: $("#name").val(),
+                nim: $("#nim").val()
+            };
+
+            if (id) {
+                $.ajax({
+                    url: BASE_URL + "/" + id,
+                    type: "PUT",
+                    contentType: "application/json",
+                    data: JSON.stringify(userData),
+                    success: function () {
+                        setMessage("User berhasil diupdate.", "success");
+                        resetForm();
+                        loadUsers();
+                    },
+                    error: function (xhr) {
+                        console.log(xhr);
+                        setMessage("Gagal update user.", "error");
+                    }
+                });
+
+                return;
+            }
+
             $.ajax({
                 url: BASE_URL,
                 type: "POST",
                 contentType: "application/json",
                 data: JSON.stringify(userData),
-
                 success: function () {
-                    $("#message").html("✅ User berhasil ditambahkan").attr("class", "success");
+                    setMessage("User berhasil ditambahkan.", "success");
                     resetForm();
                     loadUsers();
                 },
-
                 error: function (xhr) {
                     console.log(xhr);
-                    $("#message").html("❌ Error: " + xhr.responseText).attr("class", "error");
+                    setMessage("Error: " + xhr.responseText, "error");
+                }
+            });
+        });
+
+        function editUser(id, name, nim) {
+            $("#userId").val(id);
+            $("#name").val(name);
+            $("#nim").val(nim);
+
+            setMessage("Mode edit aktif.", "success");
+        }
+
+        function deleteUser(id) {
+            if (!confirm("Yakin ingin hapus user?")) {
+                return;
+            }
+
+            $.ajax({
+                url: BASE_URL + "/" + id,
+                type: "DELETE",
+                success: function () {
+                    setMessage("User berhasil dihapus.", "success");
+                    loadUsers();
+                },
+                error: function (xhr) {
+                    console.log(xhr);
+                    setMessage("Gagal hapus user.", "error");
                 }
             });
         }
-    });
 
-    // ========================
-    // EDIT USER
-    // ========================
-    function editUser(id, name, nim) {
-        $("#userId").val(id);
-        $("#name").val(name);
-        $("#nim").val(nim);
+        function resetForm() {
+            $("#userId").val("");
+            $("#name").val("");
+            $("#nim").val("");
+            $("#message").text("").attr("class", "");
+        }
 
-        $("#message").html("✏️ Mode edit aktif").attr("class", "success");
-    }
-
-    // ========================
-    // DELETE USER
-    // ========================
-    function deleteUser(id) {
-        if (!confirm("Yakin ingin hapus user?")) return;
-
-        $.ajax({
-            url: BASE_URL + "/" + id,
-            type: "DELETE",
-
-            success: function () {
-                $("#message").html("🗑️ User berhasil dihapus").attr("class", "success");
-                loadUsers();
-            },
-
-            error: function (xhr) {
-                console.log(xhr);
-                $("#message").html("❌ Gagal hapus user").attr("class", "error");
-            }
+        $(document).ready(function () {
+            loadUsers();
         });
-    }
-
-    // ========================
-    // RESET FORM
-    // ========================
-    function resetForm() {
-        $("#userId").val("");
-        $("#name").val("");
-        $("#nim").val("");
-
-        $("#message").html("");
-    }
-
-    // ========================
-    // INIT LOAD
-    // ========================
-    $(document).ready(function () {
-        loadUsers();
-    });
-
-</script>
-
+    </script>
 </body>
 </html>
